@@ -170,15 +170,10 @@ contract Droplet is Ownable, IERC20, IERC20Metadata, IERC20Errors, IERC20Permit,
     /**
      * @inheritdoc IERC20Permit
      */
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public virtual {
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        public
+        virtual
+    {
         if (block.timestamp > deadline) {
             revert ERC2612ExpiredSignature(deadline);
         }
@@ -240,7 +235,7 @@ contract Droplet is Ownable, IERC20, IERC20Metadata, IERC20Errors, IERC20Permit,
         }
         _update(address(0), account, value);
     }
-    
+
     /**
      * @dev Destroys a `value` amount of tokens from `account`, lowering the total supply.
      * Relies on the `_update` mechanism.
@@ -276,7 +271,7 @@ contract Droplet is Ownable, IERC20, IERC20Metadata, IERC20Errors, IERC20Permit,
         }
     }
 
-     /**
+    /**
      * @dev Moves a `value` amount of tokens from `from` to `to`.
      *
      * This internal function is equivalent to {transfer}, and can be used to
@@ -387,7 +382,12 @@ contract Droplet is Ownable, IERC20, IERC20Metadata, IERC20Errors, IERC20Permit,
         return storageSlot.deriveMapping(account).getUint256Slot();
     }
 
-    function _getAllowanceSlot(address owner, address spender) internal view virtual returns (StorageSlot.Uint256Slot storage) {
+    function _getAllowanceSlot(address owner, address spender)
+        internal
+        view
+        virtual
+        returns (StorageSlot.Uint256Slot storage)
+    {
         return storageSlot.deriveMapping(owner).deriveMapping(spender).getUint256Slot();
     }
 

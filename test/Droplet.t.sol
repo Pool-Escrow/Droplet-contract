@@ -47,4 +47,4 @@ contract DropletTest is Test {
         droplet.totalSupply("Droplet.storage.version.1");
         droplet.balanceOf(address(this), "Droplet.storage.version.1");
     }
-}   
+}
