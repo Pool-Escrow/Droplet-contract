@@ -2,32 +2,37 @@
 pragma solidity ^0.8.28;
 
 // Inheritances
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 // Libraries
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {SlotDerivation} from "@openzeppelin/contracts/utils/SlotDerivation.sol";
 import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 
-contract Droplet is Ownable, IERC20, IERC20Metadata, IERC20Errors, IERC20Permit, EIP712, Nonces {
+contract ERC20StorageVersioned is AccessControl, IERC20, IERC20Metadata, IERC20Errors, IERC20Permit, EIP712, Nonces {
     using SlotDerivation for bytes32;
     using StorageSlot for bytes32;
 
     // Constants
-    bytes32 private constant PERMIT_TYPEHASH =
-        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
+    bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
+    // keccak256("TOKEN_MANAGER_ROLE");
+    bytes32 public constant TOKEN_MANAGER_ROLE = 0x74f7a545c65c11839a48d7453738b30c295408df2d944516167556759ddc6d06;
 
     // Storage
-    bytes32 private storageSlot = bytes32(uint256(keccak256("Droplet.storage.version.1")) - 1);
+    // bytes32(uint256(keccak256("Droplet.storage.version.1")) - 1)
+    bytes32 public storageSlot = 0x90526f0b569261bc3b523c91448de975dac264b7144477891183994e6193ab55;
     string private _name;
     string private _symbol;
+
+    // Events
+    event StorageUpgraded(bytes32 oldStorageSlot, bytes32 newStorageSlot);
 
     // Errors
     /**
@@ -45,9 +50,11 @@ contract Droplet is Ownable, IERC20, IERC20Metadata, IERC20Errors, IERC20Permit,
      *
      * It's a good idea to use the same `name` that is defined as the ERC-20 token name.
      */
-    constructor(string memory name_, string memory symbol_) EIP712(name_, "1") Ownable(msg.sender) {
+    constructor(string memory name_, string memory symbol_) EIP712(name_, "1") {
         _name = name_;
         _symbol = symbol_;
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(TOKEN_MANAGER_ROLE, msg.sender);
     }
 
     /**
@@ -207,16 +214,18 @@ contract Droplet is Ownable, IERC20, IERC20Metadata, IERC20Errors, IERC20Permit,
 
     // ============================== Admin functions ==============================
 
-    function mint(address to, uint256 value) external onlyOwner {
+    function mint(address to, uint256 value) external onlyRole(TOKEN_MANAGER_ROLE) {
         _mint(to, value);
     }
 
-    function burn(address from, uint256 value) external onlyOwner {
+    function burn(address from, uint256 value) external onlyRole(TOKEN_MANAGER_ROLE) {
         _burn(from, value);
     }
 
-    function upgradeStorage(string memory slot_) external onlyOwner {
+    function upgradeStorage(string memory slot_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        bytes32 oldStorageSlot = storageSlot;
         storageSlot = bytes32(uint256(keccak256(abi.encodePacked(slot_))) - 1);
+        emit StorageUpgraded(oldStorageSlot, storageSlot);
     }
 
     // ============================== Internal functions ==============================
